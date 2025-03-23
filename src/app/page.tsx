@@ -1,103 +1,83 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import "bootstrap/dist/css/bootstrap.min.css";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+export default function Gallery() {
+    const [images, setImages] = useState<{ id: string; variants: string[] }[]>([]);
+    const [file, setFile] = useState<File | null>(null);
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
+
+    useEffect(() => {
+        fetchImages();
+    }, []);
+
+    const fetchImages = async () => {
+        try {
+            const response = await axios.get('http://localhost:3001/images');
+            setImages(response.data.result.images);
+        } catch (error) {
+            console.error('Error fetching images:', error);
+        }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+            setFile(event.target.files[0]);
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!file) {
+            setError('Selecciona un archivo para subir.');
+            return;
+        }
+        
+        setLoading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        try {
+            await axios.post('http://localhost:3001/images/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            setError('');
+            fetchImages();
+        } catch (error) {
+            setError('Error al subir la imagen.');
+            console.error('Upload error:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div>
+            <h1>Galería de Imágenes</h1>
+            <input type="file" onChange={handleFileChange} className="form-control" />
+            <button type="button" className="btn btn-primary btn-lg" onClick={handleUpload} disabled={loading}>
+                {loading ? <div className="spinner-border text-light" role="status"></div> : "Subir Imagen"}
+            </button>
+            {error && <p className="text-danger">{error}</p>}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '10px' }}>
+                {images.map((img) => (
+                    <img 
+                        key={img.id} 
+                        src={img.variants[0]} 
+                        alt="Imagen subida" 
+                        style={{ width: '100%', borderRadius: '8px', cursor: 'pointer' }} 
+                        onClick={() => setSelectedImage(img.variants[0])} 
+                    />
+                ))}
+            </div>
+            {selectedImage && (
+                <div className="modal" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.7)' }} onClick={() => setSelectedImage(null)}>
+                    <img src={selectedImage} alt="Imagen ampliada" style={{ width: '750px', height: '750px', objectFit: 'contain', borderRadius: '8px' }} />
+                </div>
+            )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
